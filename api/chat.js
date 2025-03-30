@@ -7,8 +7,7 @@ import { chatWithLLM } from "../utils/chatWithLLM.js";
 import connectToMongo from "../utils/mongodb.js";
 import Conversation from "../utils/models/Conversation.js";
 
-
-
+// Connect to MongoDB once on cold start
 connectToMongo();
 
 export default async function handler(req, res) {
@@ -17,41 +16,41 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { metadata, audioBase64 } = req.body;
+    const { metadata, audioBase64, userMessage } = req.body;
 
-    if (!audioBase64 || !metadata) {
-      return res.status(400).json({ error: "Missing audio or metadata" });
+    // 💬 Handle text-based input
+    if (userMessage) {
+      const reply = await chatWithLLM(userMessage);
+      return res.status(200).json({ success: true, reply });
     }
 
-    // Decode the base64 string and save to temp file
-    const buffer = Buffer.from(audioBase64, "base64");
-    const tempFilePath = path.join("/tmp", `audio-${Date.now()}.webm`);
-    fs.writeFileSync(tempFilePath, buffer);
+    // 🎙️ Handle audio-based input
+    if (audioBase64 && metadata) {
+      const buffer = Buffer.from(audioBase64, "base64");
+      const tempFilePath = path.join("/tmp", `audio-${Date.now()}.webm`);
+      fs.writeFileSync(tempFilePath, buffer);
 
-    // 1. Transcribe audio
-    const transcript = await transcribeAudio(tempFilePath);
+      const transcript = await transcribeAudio(tempFilePath);
+      const reply = await chatWithLLM(transcript);
 
-    // 2. Get LLM response
-    const reply = await chatWithLLM(transcript);
+      await Conversation.create({
+        sessionId: metadata.sessionId,
+        userId: metadata.userId,
+        transcript,
+        reply,
+        timestamp: new Date(),
+      });
 
-    // 3. Store in Mongo
-    await Conversation.create({
-      sessionId: metadata.sessionId,
-      userId: metadata.userId,
-      transcript,
-      reply,
-      timestamp: new Date(),
-    });
+      fs.unlink(tempFilePath, () => {});
 
-    // 4. Cleanup
-    fs.unlink(tempFilePath, () => {});
+      return res.status(200).json({
+        success: true,
+        reply,
+        transcript,
+      });
+    }
 
-    // 5. Respond
-    return res.status(200).json({
-      success: true,
-      reply,
-      transcript,
-    });
+    return res.status(400).json({ error: "Invalid request: missing userMessage or audioBase64 + metadata" });
   } catch (err) {
     console.error("🔥 Error in /api/chat:", err.stack || err);
     return res.status(500).json({ error: err.message || "Internal Server Error" });
