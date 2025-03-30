@@ -1,4 +1,4 @@
-// backend/api/chat.js
+//api/chat.js
 
 import multer from "multer";
 import fs from "fs";
