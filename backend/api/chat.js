@@ -1,26 +1,30 @@
-// api/chat.js
-const express = require("express");
-const multer = require("multer");
-const cors = require("cors");
-const fs = require("fs");
-require("dotenv").config();
+// backend/api/chat.js
 
-const { transcribeAudio } = require("../utils/transcribeAudio");
-const { chatWithLLM } = require("../utils/chatWithLLM");
-const connectToMongo = require("../utils/mongodb");
-const Conversation = require("../utils/models/Conversation");
+import multer from "multer";
+import fs from "fs";
+import nextConnect from "next-connect";
+import { transcribeAudio } from "../../utils/transcribeAudio.js";
+import { chatWithLLM } from "../../utils/chatWithLLM.js";
+import connectToMongo from "../../utils/mongodb.js";
+import Conversation from "../../utils/models/Conversation.js";
 
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-// File upload setup
-const upload = multer({ dest: "uploads/" });
-
-// Connect to MongoDB
 connectToMongo();
 
-app.post("/api/chat", upload.single("audio"), async (req, res) => {
+const upload = multer({ dest: "uploads/" });
+
+const apiRoute = nextConnect({
+  onError(error, req, res) {
+    console.error("API Route Error:", error);
+    res.status(501).json({ error: `Sorry something happened! ${error.message}` });
+  },
+  onNoMatch(req, res) {
+    res.status(405).json({ error: `Method '${req.method}' Not Allowed` });
+  },
+});
+
+apiRoute.use(upload.single("audio"));
+
+apiRoute.post(async (req, res) => {
   try {
     const metadata = JSON.parse(req.body.metadata);
     const audioFile = req.file;
@@ -29,13 +33,9 @@ app.post("/api/chat", upload.single("audio"), async (req, res) => {
       return res.status(400).json({ error: "Missing audio or metadata" });
     }
 
-    // 1. Transcribe audio
     const transcript = await transcribeAudio(audioFile.path);
-
-    // 2. Get LLM response
     const reply = await chatWithLLM(transcript);
 
-    // 3. Store conversation using Mongoose model
     await Conversation.create({
       sessionId: metadata.sessionId,
       userId: metadata.userId,
@@ -44,10 +44,8 @@ app.post("/api/chat", upload.single("audio"), async (req, res) => {
       timestamp: new Date(),
     });
 
-    // 4. Clean up temp file
-    fs.unlink(audioFile.path, () => {});
+    fs.unlink(audioFile.path, () => {}); // delete temp file
 
-    // 5. Send response
     res.json({
       success: true,
       reply,
@@ -59,12 +57,9 @@ app.post("/api/chat", upload.single("audio"), async (req, res) => {
   }
 });
 
-// Only run if executed directly
-if (require.main === module) {
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
-    console.log(`🚀 Backend running on http://localhost:${PORT}`);
-  });
-}
-
-module.exports = app;
+export default apiRoute;
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
