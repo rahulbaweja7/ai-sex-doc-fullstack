@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Sexual Health Doctor</title>
+  <style>
+    body {
+      font-family: 'Times New Roman', Times, serif, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    #chatbox {
+      border: 1px solid #ccc;
+      padding: 20px;
+      margin-bottom: 20px;
+      min-height: 200px;
+      border-radius: 5px;
+    }
+    #voiceBtn {
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    #voiceBtn:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <h1>Ask Dr. AI (Sexual Health Chatbot)</h1>
+  
+  <div id="chatbox">
+    <p id="userLine">You: </p>
+    <p id="botLine">Dr. AI: </p>
+  </div>
+  <button id="voiceBtn">Start Talking</button>
+
+  <script src="app.js"></script>
+</body>
+</html>
