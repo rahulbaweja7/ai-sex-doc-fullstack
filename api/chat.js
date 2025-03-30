@@ -2,10 +2,11 @@
 
 import fs from "fs";
 import path from "path";
-import { transcribeAudio } from "../../utils/transcribeAudio.js";
-import { chatWithLLM } from "../../utils/chatWithLLM.js";
-import connectToMongo from "../../utils/mongodb.js";
-import Conversation from "../../utils/models/Conversation.js";
+import { transcribeAudio } from "../utils/transcribeAudio.js";
+import { chatWithLLM } from "../utils/chatWithLLM.js";
+import connectToMongo from "../utils/mongodb.js";
+import Conversation from "../utils/models/Conversation.js";
+
 
 connectToMongo();
 
